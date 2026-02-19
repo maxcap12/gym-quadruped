@@ -341,7 +341,7 @@ class QuadrupedEnv(gym.Env):
         # Reset the robot state ----------------------------------------------------------------------------------------
         if qpos is None and qvel is None:  # Random initialization around xml keyframe 0
             mujoco.mj_resetDataKeyframe(self.mjModel, self.mjData, 0)
-            
+
             # Add white noise to the joint-space position and velocity
             if random:
                 q_pos_amp = 20 * np.pi / 180 if 'angle_sweep' not in options else options['angle_sweep']
@@ -423,6 +423,8 @@ class QuadrupedEnv(gym.Env):
                 show_right_ui=False,
                 key_callback=lambda x: self._key_callback(x),
             )
+            self.viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_SHADOW] = False
+            self.viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_REFLECTION] = False
             if tint_robot:
                 change_robot_appearance(self.mjModel, alpha=1.0)
 
@@ -581,10 +583,10 @@ class QuadrupedEnv(gym.Env):
         else:
             raise ValueError(f"Invalid frame: {frame} != 'world' or 'base'")
         # TODO: Name of bodies should not be hardcodd
-        FL_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'fl_hip')
-        FR_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'fr_hip')
-        RL_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'hl_hip')
-        RR_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'hr_hip')
+        FL_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'FL_hip')
+        FR_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'FR_hip')
+        RL_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'RL_hip')
+        RR_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'RR_hip')
         return LegsAttr(
             FR=R.T @ self.mjData.body(FR_hip_id).xpos,
             FL=R.T @ self.mjData.body(FL_hip_id).xpos,
@@ -1358,11 +1360,9 @@ class QuadrupedEnv(gym.Env):
     def _find_feet_model_attrs(self, feet_geom_name):
         _all_geoms = [mujoco.mj_id2name(self.mjModel, i, mujoco.mjtObj.mjOBJ_GEOM) for i in range(self.mjModel.ngeom)]
         for lef_name in ['FR', 'FL', 'RR', 'RL']:
-            print(f'{feet_geom_name[lef_name]} in {_all_geoms}')
             foot_geom_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_GEOM, feet_geom_name[lef_name])
             assert foot_geom_id != -1, f'Foot GEOM {feet_geom_name[lef_name]} not found in {_all_geoms}.'
             self._feet_geom_id[lef_name] = foot_geom_id
-            print(feet_geom_name)
             foot_body_id, foot_body_name = self._get_geom_body_info(geom_id=foot_geom_id)
             self._feet_body_id[lef_name] = foot_body_id
 
@@ -1379,9 +1379,10 @@ class QuadrupedEnv(gym.Env):
                 f'{self.ground_friction_coeff_range[1]:.1e})'
             )
         return msg
-    
-    def get_joint_positions(self, joint_names):
+
+    def get_joint_attributes(self, joint_names):
         angles = []
+        velocities = []
 
         for joint in joint_names:
             joint_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_JOINT, joint)
@@ -1389,11 +1390,13 @@ class QuadrupedEnv(gym.Env):
             if joint_id >= 0:
                 qpos_adr = self.mjModel.jnt_qposadr[joint_id]
                 angles.append(self.mjData.qpos[qpos_adr])
+                qvel_adr = self.mjModel.jnt_dofadr[joint_id]
+                velocities.append(self.mjData.qvel[qvel_adr])
             else:
+                velocities.append(0)
                 angles.append(0)
 
-        return angles
-
+        return angles, velocities
 
 # Example usage:
 if __name__ == '__main__':
