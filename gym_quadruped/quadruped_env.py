@@ -561,7 +561,7 @@ class QuadrupedEnv(gym.Env):
 
         return inertia_B_at_qpos
 
-    def hip_positions(self, frame='world') -> LegsAttr:
+    def hip_positions(self, frame='world', names=None) -> LegsAttr:
         """Get the hip positions in the specified frame.
 
         Args:
@@ -582,11 +582,28 @@ class QuadrupedEnv(gym.Env):
             R = self.base_configuration[0:3, 0:3]
         else:
             raise ValueError(f"Invalid frame: {frame} != 'world' or 'base'")
-        # TODO: Name of bodies should not be hardcodd
-        FL_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'FL_hip')
-        FR_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'FR_hip')
-        RL_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'RL_hip')
-        RR_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'RR_hip')
+        
+        if names is None:
+            if self.robot_name == "spot":
+                names = {
+                    'fl': 'fl_hip',
+                    'fr': 'fr_hip',
+                    'rl': 'hl_hip',
+                    'rr': 'hr_hip'
+                }
+            else:
+                names = {
+                    'fl': 'FL_hip',
+                    'fr': 'FR_hip',
+                    'rl': 'RL_hip',
+                    'rr': 'RR_hip'
+                }
+                
+        FL_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, names['fl'])
+        FR_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, names['fr'])
+        RL_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, names['rl'])
+        RR_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, names['rr'])
+        
         return LegsAttr(
             FR=R.T @ self.mjData.body(FR_hip_id).xpos,
             FL=R.T @ self.mjData.body(FL_hip_id).xpos,
