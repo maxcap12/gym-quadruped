@@ -51,17 +51,7 @@ def get_robot_config(robot_name: str) -> RobotConfig:
     elif 'hyqreal2' in name:
         cfg = RobotConfig(mjcf_filename='hyqreal2/hyqreal2.xml', hip_height=0.498)
     elif 'spot' in name:
-        cfg = RobotConfig(
-            mjcf_filename='spot/spot.xml', 
-            hip_height=0.65,
-            feet_geom_names={'FR': 'FR', 'FL': 'FL', 'RL': 'HL', 'RR': 'HR'},
-            leg_joints= {
-                'FL': ['fl_hx', 'fl_hy', 'fl_kn'],
-                'FR': ['fr_hx', 'fr_hy', 'fr_kn'],
-                'RL': ['hl_hx', 'hl_hy', 'hl_kn'],
-                'RR': ['hr_hx', 'hr_hy', 'hr_kn'],
-            },
-        )
+        cfg = RobotConfig(mjcf_filename='spot/spot.xml', hip_height=0.46)
     else:
         raise ValueError(f'Unknown robot name: {robot_name}')
 
